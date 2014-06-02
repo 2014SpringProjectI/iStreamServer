@@ -1,5 +1,6 @@
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #define MAX_STREAMS 20
-
 #define IOBUFFER_INIT_SIZE 8192
 /* timeouts are in ms */
 #define HTTP_REQUEST_TIMEOUT (15 * 1000)
@@ -519,3 +520,38 @@ typedef struct RTSPState {
      */
     char *user_agent;
 } RTSPState;
+
+/* description of each stream of the ffserver.conf file */
+typedef struct FFStream {
+    //enum StreamType stream_type;
+    char filename[1024];     /* stream filename */
+    struct FFStream *feed;   /* feed we are using (can be null if
+                                coming from file) */
+  //  AVDictionary *in_opts;   /* input parameters */
+  //  AVDictionary *metadata;  /* metadata to set on the stream */
+   // AVInputFormat *ifmt;       /* if non NULL, force input format */
+  //  AVOutputFormat *fmt;
+  //  IPAddressACL *acl;
+    char dynamic_acl[1024];
+    int nb_streams;
+    int prebuffer;      /* Number of milliseconds early to start */
+    int64_t max_time;      /* Number of milliseconds to run */
+    int send_on_key;
+   // AVStream *streams[MAX_STREAMS];
+    int feed_streams[MAX_STREAMS]; /* index of streams in the feed */
+    char feed_filename[1024]; /* file name of the feed storage, or
+                                 input file name for a stream */
+    pid_t pid;  /* Of ffmpeg process */
+    time_t pid_start;  /* Of ffmpeg process */
+    char **child_argv;
+    struct FFStream *next;
+    unsigned bandwidth; /* bandwidth, in kbits/s */
+    /* RTSP options */
+    char *rtsp_option;
+    /* multicast specific */
+    int is_multicast;
+    struct in_addr multicast_ip;
+    int multicast_port; /* first port used for multicast */
+    int multicast_ttl;
+    int loop; /* if true, send the stream in loops (only meaningful if file) */
+} FFStream;
