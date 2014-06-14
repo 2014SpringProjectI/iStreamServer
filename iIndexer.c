@@ -113,7 +113,6 @@ int main(int argc, char const** argv)
 		{
 			// Starting TS packet analysis
 			Packets++;
-			
 			// General TS values
 			unsigned char sync_byte = Buffer[0];
 			unsigned char transport_error_indicator = (Buffer[1] & 0x80) >> 7;
@@ -152,15 +151,41 @@ int main(int argc, char const** argv)
             if (type == 5) { 
               printf("picture type = %u \n", type);
               iFrame_Found++;
-              printf("i frame found!!! \n");
+              printf("i frame found!!! Packet Num = %lld\n", Packets);
+              //ts_packet_header_dump(ts_header);
+              if (ts_packet_has_pcr(Buffer))  {
+                uint64_t pcr_base = 0;
+                uint16_t pcr_ext = 0;
+                uint64_t pcr = ts_packet_get_pcr_ex(Buffer, &pcr_base, &pcr_ext);
+                printf("It has pcr too!! %lld %.3fs\n", pcr, ((double)pcr_base / 90000.0f) + ((double)pcr_ext/27000000.0f));
+              }
+              uint16_t pes_len = 0;
+              if (ts_packet_has_pes(Buffer, &pes_len)) {
+                printf("It has pes too!! \n");
+              }
+              uint64_t pts;
+              uint64_t dts;
+              if (ts_packet_has_pts_dts(Buffer,  &pts, &dts)) {
+                printf("It has pts,dts too!! \n");
+              }
             }
           } else if (V_TYPE == 265) {
-            unsigned char type = Buffer[offset+i+2] == 1 ? (Buffer[offset+3+i] & 0x7e) : (Buffer[offset+4+i] & 0x7e);
+            unsigned char type = Buffer[offset+i+2] == 1 ? (Buffer[offset+3+i] & 0x7e) >> 1 : (Buffer[offset+4+i] & 0x7e) >> 1;
             // 16,17,18 - BLA , 19,20 IDR, 21 CRA
             if (type >= 16 && type <= 21) { 
               printf("picture type = %u \n", type);
               iFrame_Found++;
-              printf("i frame found!!! \n");
+              printf("i frame found!!! Packet Num = %lld\n", Packets);
+              if (ts_packet_has_pcr(Buffer))  {
+                uint64_t pcr_base = 0;
+                uint16_t pcr_ext = 0;
+                uint64_t pcr = ts_packet_get_pcr_ex(Buffer, &pcr_base, &pcr_ext);
+                printf("It has pcr too!! %lld %.3fs\n", pcr, ((double)pcr_base / 90000.0f) + ((double)pcr_ext/27000000.0f));
+              }
+              uint16_t *pes_len;
+              if (ts_packet_has_pes(Buffer, pes_len))
+                printf("It has pes too!! \n");
+
             }
           }
         }
