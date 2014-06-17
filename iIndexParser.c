@@ -3,8 +3,8 @@
 #include "iIndexParser.h"
 #include <string.h>
 
-iIndex* first_iIndex = NULL;
-iIndex* cur_iIndex = NULL;
+//iIndex* first_iIndex = NULL;
+//iIndex* cur_iIndex = NULL;
 
 void dump_iIndexHeader(iIndexHeader *hdr)
 {
@@ -25,56 +25,19 @@ void dump_iIndex(iIndex *index)
   return;
 }
 
-iIndex* start_parse_index_file(const char *idx_filename, iIndexHeader *hdr)
+void dump_through_iIndex(iIndex *index)
 {
-  FILE *f_idx;
-  f_idx = fopen(idx_filename, "rb");
-  if (f_idx == NULL)
+  int cnt = 0;
+  printf("dump through index!! ---- \n");
+  iIndex *i;
+  iIndex *idx_next;
+  for (i = index; i != NULL; i = idx_next)
   {
-		printf("ERROR: Cannot open index file [%s]!\n",idx_filename);
-		fclose(f_idx);
-		return NULL;
+    idx_next = i->next;
+    dump_iIndex(i);
+    cnt++;
   }
-  //first parse header
-  unsigned char *buf = malloc(sizeof(*hdr));
-  if (!buf)
-  {
-		printf("ERROR: Cannot malloc buf size\n");
-		fclose(f_idx);
-		return NULL;
-  }
-  fread(buf, 1, sizeof(*hdr), f_idx);
-  memcpy(hdr, buf, sizeof(*hdr));
-  free(buf);
-  dump_iIndexHeader(hdr);
-  // parse indexes
-  unsigned char idx_buf[14];
-	size_t NbRead = 0;
-	int cnt = 0;
-  do {
-		NbRead=fread(idx_buf,1,sizeof(idx_buf),f_idx);
-		if (NbRead != 14)
-		  break;
-		cnt++;
-    iIndex *idx = malloc(sizeof(*idx));
-    idx->next = NULL;
-    memcpy(&(idx->pos), idx_buf, 4); 
-    memcpy(&(idx->pcr), idx_buf + 4, 6); 
-    memcpy(&(idx->frame_num), idx_buf + 10, 4); 
-    dump_iIndex(idx);
-    printf("cnt = %d \n", cnt);
-    if (first_iIndex == NULL) {
-      first_iIndex = idx;
-      cur_iIndex = idx;
-    } else {
-      cur_iIndex->next = idx;
-      cur_iIndex = idx;
-    }
-    free(idx);
-  } while(NbRead == 14);
-
-  fclose(f_idx);
-  return first_iIndex;
+  printf("index search finisehd! cnt = %d\n", cnt);
 }
 
 double get_iIndex_PCR(iIndex *index)
@@ -90,4 +53,95 @@ double get_iIndex_PCR(iIndex *index)
 	pcr_ext   = ((uint16_t)data[4] & 0x01) << 8;
 	pcr_ext  += (uint16_t)data[5];
 	return ((pcr_base / 90000.0f) + (pcr_ext/27000000.0f));
+}
+
+int64_t get_closest_iframe_pos_by_time(iIndex *first_idx, double cur_time)
+{
+  iIndex *i;
+  if (cur_time <= get_iIndex_PCR(first_idx))
+    return 0;
+
+  for (i = first_idx; i != NULL; i = i->next)
+  {
+    // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
+    if (get_iIndex_PCR(i->next) >= cur_time)
+      return i->pos;
+  }
+  // can't find. 
+  return 0;
+}
+
+int64_t get_closest_iframe_pos(iIndex *first_idx, int64_t cur_pos)
+{
+  iIndex *i;
+  if (cur_pos <= first_idx->pos)
+    return 0;
+
+  for (i = first_idx; i != NULL; i = i->next)
+  {
+    // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
+    if (i->next->pos >= cur_pos)
+      return i->pos;
+  }
+  // can't find. 
+  return 0;
+}
+
+
+iIndex* start_parse_index_file(const char *idx_filename, iIndexHeader *hdr)
+{
+  FILE *f_idx;
+  iIndex* first_iIndex = NULL;
+  iIndex* cur_iIndex = NULL;
+  f_idx = fopen(idx_filename, "rb");
+  if (f_idx == NULL)
+  {
+		printf("ERROR: Cannot open index file [%s]\n",idx_filename);
+		fclose(f_idx);
+		return NULL;
+  }
+  //first parse header
+  unsigned char *buf = malloc(sizeof(*hdr));
+  if (!buf)
+  {
+		printf("ERROR: Cannot malloc buf size\n");
+		fclose(f_idx);
+		return NULL;
+  }
+  fread(buf, 1, sizeof(*hdr), f_idx);
+  memcpy(hdr, buf, sizeof(*hdr));
+  free(buf);
+  //dump_iIndexHeader(hdr);
+
+  // parse indexes
+  unsigned char idx_buf[14];
+	size_t NbRead = 0;
+	int cnt = 0;
+  do {
+		NbRead=fread(idx_buf,1,sizeof(idx_buf),f_idx);
+		if (NbRead != 14)
+		  break;
+		cnt++;
+    iIndex *idx = malloc(sizeof(*idx));
+    idx->next = NULL;
+    memcpy(&(idx->pos), idx_buf, 4); 
+    memcpy(&(idx->pcr), idx_buf + 4, 6); 
+    memcpy(&(idx->frame_num), idx_buf + 10, 4); 
+   // dump_iIndex(idx);
+   //
+    //printf("cnt = %d \n", cnt);
+    if (first_iIndex == NULL) {
+      //printf("first index == null \n");
+      first_iIndex = idx;
+      cur_iIndex = idx;
+    } else {
+      //printf("cur index != null \n");
+      cur_iIndex->next = idx;
+      cur_iIndex = idx;
+    }
+    //free(idx);
+  } while(NbRead == 14);
+
+  fclose(f_idx);
+  return first_iIndex;
 }

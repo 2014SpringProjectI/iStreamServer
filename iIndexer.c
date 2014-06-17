@@ -302,7 +302,7 @@ int main(int argc, char const** argv)
 	unsigned int bit_rate = (unsigned int)((total_length / duration) * 8.0f / 1000.0f); // kbps
 	hdr->total_length = Packets;
 	hdr->bit_rate = (unsigned int)bit_rate;
-	hdr->encoding_format = V_TYPE;
+	hdr->encoding_format = V_TYPE == 264 ? 0 : 1;
 	hdr->duration = duration;
   unsigned char IndexHeader[sizeof(*hdr)]; 
   memcpy(IndexHeader, hdr, sizeof(*hdr));
@@ -317,9 +317,11 @@ int main(int argc, char const** argv)
 	fclose(sw);
   
   // for test
-  //iIndexHeader *i_hdr = malloc(sizeof(*i_hdr));
-	//start_parse_index_file(IndexName, i_hdr);
-	//free(i_hdr);
+  iIndexHeader *i_hdr = malloc(sizeof(*i_hdr));
+	iIndex *first_idx = start_parse_index_file(IndexName, i_hdr);
+	dump_iIndexHeader(i_hdr);
+	dump_through_iIndex(first_idx);
+	free(i_hdr);
 	// test end 
 	
 	// Show stats

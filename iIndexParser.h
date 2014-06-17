@@ -14,5 +14,9 @@ typedef struct {
 
 void dump_iIndexHeader(iIndexHeader *hdr); 
 void dump_iIndex(iIndex *index);
+void dump_through_iIndex(iIndex *index);
 double get_iIndex_PCR(iIndex *index);
+// return pakcet position! not bytes position! multipliy 188 to thie value to optaion bytes offset.
+int64_t get_closest_iframe_pos(iIndex *first_idx, int64_t cur_pos);
+int64_t get_closest_iframe_pos_by_time(iIndex *first_idx, double cur_time);
 iIndex* start_parse_index_file(const char *idx_filename, iIndexHeader *hdr); // return the first node of iIndex
