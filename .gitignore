@@ -1,1 +1,4 @@
 Makefile
+*.ts
+*.tsx
+*.o
