@@ -70,6 +70,36 @@ int64_t get_closest_iframe_pos_by_time(iIndex *first_idx, double cur_time)
   // can't find. 
   return 0;
 }
+iIndex* get_closest_iframe_by_pos(iIndex *first_idx, int64_t cur_pos)
+{
+  iIndex *i;
+  if (cur_pos <= first_idx->pos)
+    return first_idx;
+
+  for (i = first_idx; i != NULL; i = i->next)
+  {
+    // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
+    if (i->next->pos >= cur_pos)
+      return i;
+  }
+  // can't find. 
+  return NULL;
+}
+iIndex* get_closest_iframe_by_time(iIndex *first_idx, int64_t cur_time)
+{
+  iIndex *i;
+  if (cur_time <= get_iIndex_PCR(first_idx))
+    return first_idx;
+
+  for (i = first_idx; i != NULL; i = i->next)
+  {
+    // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
+    if (get_iIndex_PCR(i->next) >= cur_time)
+      return i;
+  }
+  // can't find. 
+  return NULL;
+}
 
 int64_t get_closest_iframe_pos(iIndex *first_idx, int64_t cur_pos)
 {

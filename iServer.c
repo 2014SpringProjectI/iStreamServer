@@ -795,7 +795,36 @@ static int rtsp_parse_request(RTSPContext *c)
           len = sizeof(line) - 1;
       memcpy(line, p, len);
       line[len] = '\0';
+      //printf("rstp_parse_line = %s\n", line);
       // header에 line읽은거 셋팅하는 거인 듯?
+      // range parsing! 
+      if (!strncmp(line, "Range: npt=", strlen("Range: npt="))) {
+        printf("range info contained! line = %s \n", line);
+        char *end_pos = strrchr(line, '-');
+        char *start_pos = strrchr(line, '=');
+        char *start_npt = malloc(end_pos - start_pos - 1);
+        strncpy(start_npt, start_pos+1, end_pos - start_pos - 1);
+        //printf("range start npt = %s\n", start_npt);
+        double start_time = 0.0;
+        sscanf(start_npt, "%lf", &start_time);
+        //printf("range start time = %lfs\n", start_time);
+        c->ntp_start_time = start_time;
+      }
+
+      // for trick
+      if (!strncmp(line, "Scale:", strlen("Scale:"))) {
+        printf("scale info contained! line = %s \n", line);
+        char *end_pos = strrchr(line, '\n');
+        char *start_pos = strrchr(line, ' ');
+        char *scale = malloc(end_pos - start_pos - 1);
+        strncpy(scale, start_pos+1, end_pos - start_pos - 1);
+        printf("scale = %s\n", scale);
+        double start_time = 0.0;
+        sscanf(scale, "%lf", &start_time);
+        //printf("range start time = %lfs\n", start_time);
+        //c->ntp_start_time = start_time;
+      }
+      
       ff_rtsp_parse_line(header, line, NULL, NULL);
       p = p1 + 1;
     }
@@ -989,6 +1018,8 @@ static RTSPContext *rtp_new_connection(struct sockaddr_in *from_addr,
   av_strlcpy(c->session_id, session_id, sizeof(c->session_id));
   c->state = HTTPSTATE_READY;
   c->last_packet_sent = false;
+  c->ntp_start_time = 0.0;
+  c->cur_idx = NULL;
 
   /* protocol is shown in statistics */
   av_strlcpy(c->protocol, "RTP/UDP", sizeof(c->protocol));
@@ -1073,10 +1104,20 @@ static void rtsp_cmd_play(RTSPContext *c, const char *url, RTSPMessageHeader *h)
     // pos * 188이 offset!
     int64_t last_offset = rtp_c->cur_offset;
     printf("cmd play! cur_offset = %lld\n", rtp_c->cur_offset);
-    rtp_c->cur_offset = get_closest_iframe_pos(rtp_c->stream->first_idx, rtp_c->cur_offset / 188) * 188; 
+    if (c->ntp_start_time != 0.0) {
+      // set start time for seek! 
+      printf("find start time by ntp time!!! seek request! seek time = %lfs \n", c->ntp_start_time);
+      rtp_c->ntp_start_time = c->ntp_start_time;
+      rtp_c->cur_idx = get_closest_iframe_by_time(rtp_c->stream->first_idx, rtp_c->ntp_start_time);
+      if (rtp_c->cur_idx != NULL)
+        rtp_c->cur_offset = rtp_c->cur_idx->pos;
+    } else {
+    //  rtp_c->cur_offset = get_closest_iframe_pos(rtp_c->stream->first_idx, rtp_c->cur_offset / 188) * 188; 
+    }
     printf("cmd play! after find iframe cur_offset = %lld\n", rtp_c->cur_offset);
     // reset served bytes for restart from pause state
-    rtp_c->served_bytes = rtp_c->cur_offset - last_offset;
+    //rtp_c->served_bytes = rtp_c->cur_offset - last_offset;
+    rtp_c->served_bytes = 0;
     printf("cmd play! served_bytes = %lld\n", rtp_c->served_bytes);
     if (rtp_c->buffer_ptr >= rtp_c->buffer_end) {
       printf("no need to reset rtpc->buffer ptr \n");
@@ -1086,6 +1127,10 @@ static void rtsp_cmd_play(RTSPContext *c, const char *url, RTSPMessageHeader *h)
     rtsp_reply_header(c, RTSP_STATUS_OK);
     /* session ID */
     avio_printf(c->pb, "Session: %s\r\n", rtp_c->session_id);
+    if (rtp_c->cur_idx != NULL) {
+      avio_printf(c->pb, "Range: npt=%.3lf-\r\n", get_iIndex_PCR(rtp_c->cur_idx));
+      printf("range response! Range: npt=%.3lf-\n", get_iIndex_PCR(rtp_c->cur_idx));
+    }
     avio_printf(c->pb, "\r\n");
 }
 
@@ -1413,7 +1458,7 @@ static int http_send_data(RTSPContext *c)
             return -1;
           }
           if (offset_time % 1000 == 0)
-            printf("served bytes report! served_bytes =  %lldkb, time_offset = %lldms \n", c->served_bytes / 1000, offset_time);
+            printf("served bytes report! cur_offset = %lld, served_bytes =  %lldkb, time_offset = %lldms \n", c->cur_offset, c->served_bytes / 1000, offset_time);
           c->buffer_ptr += len;
           c->served_bytes += len; // pause 처리를 위해,  served_bytes를 가지고 있어야 함.
           c->cur_offset += len - 12; // rtp header size remove
