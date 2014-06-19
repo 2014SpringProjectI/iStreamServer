@@ -143,8 +143,6 @@ int main(int argc, char const** argv)
 		
 		if (NbRead==188)
 		{
-			// Starting TS packet analysis
-			Packets++;
 			// General TS values
 			unsigned char sync_byte = Buffer[0];
 			unsigned char transport_error_indicator = (Buffer[1] & 0x80) >> 7;
@@ -266,7 +264,7 @@ int main(int argc, char const** argv)
                   printf("PCR =  %.3fs\n", Last_PCR);
                   State = 1; // write index 
                   NUM_OF_WRITE++;
-                  write_index(sw, Last_PCR_BYTES, Packets, iFrame_Found);
+                  write_index(sw, Last_PCR_BYTES, PCR_Found_Pos, iFrame_Found);
                 }
               } else if (V_TYPE == 265) {
                 unsigned char type = Buffer[offset+i+2] == 1 ? (Buffer[offset+3+i] & 0x7e) >> 1 : (Buffer[offset+4+i] & 0x7e) >> 1;
@@ -288,6 +286,8 @@ int main(int argc, char const** argv)
 			} // end state 2 
 
       // write index to tsx file
+			// Starting TS packet analysis
+			Packets++;
 		}
 
 		if (NbRead>0 && NbRead<188)
@@ -319,8 +319,8 @@ int main(int argc, char const** argv)
   // for test
   iIndexHeader *i_hdr = malloc(sizeof(*i_hdr));
 	iIndex *first_idx = start_parse_index_file(IndexName, i_hdr);
-	dump_iIndexHeader(i_hdr);
-	dump_through_iIndex(first_idx);
+	//dump_iIndexHeader(i_hdr);
+	//dump_through_iIndex(first_idx);
 	free(i_hdr);
 	// test end 
 	
