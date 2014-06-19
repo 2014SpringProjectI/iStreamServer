@@ -3,7 +3,7 @@
 enum HTTPState {
     HTTPSTATE_READY,
     HTTPSTATE_WAIT_REQUEST,
-    HTTPSTATE_SEND_DATA,          /* sending TCP or UDP data */
+    RTPSTATE_SEND_DATA,          /* sending TCP or UDP data */
     HTTPSTATE_RECEIVE_DATA,
     RTSPSTATE_WAIT_REQUEST,
     RTSPSTATE_SEND_REPLY,
@@ -44,7 +44,6 @@ typedef struct RTSPContext {
   struct RTSPContext *next;
   iStream *stream;
   int64_t start_time;            /* In milliseconds - this wraps fairly often */
-  int64_t cur_clock;           /* current clock reference value in us */
   bool last_packet_sent; /* true if last data packet was sent */
   int buffer_size;
   uint8_t *buffer;
@@ -110,5 +109,5 @@ static RTSPContext *find_rtp_session_with_url(const char *url, const char *sessi
 static RTSPContext *rtp_new_connection(struct sockaddr_in *from_addr,iStream *stream, const char *session_id);
 static int rtp_new_stream(RTSPContext *c, struct sockaddr_in *dest_addr);
 int resolve_host(struct in_addr *sin_addr, const char *hostname);
-static int http_send_data(RTSPContext *c);
+static int rtp_send_data(RTSPContext *c);
 int generate_sdp_context(iStream *stream, unsigned char **buf);

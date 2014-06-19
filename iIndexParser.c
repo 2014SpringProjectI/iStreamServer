@@ -3,9 +3,6 @@
 #include "iIndexParser.h"
 #include <string.h>
 
-//iIndex* first_iIndex = NULL;
-//iIndex* cur_iIndex = NULL;
-
 void dump_iIndexHeader(iIndexHeader *hdr)
 {
   printf("------------ iIndexHeader dump----------\n");
