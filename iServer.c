@@ -516,7 +516,8 @@ static int start_event_loop(void)
 
         /* wait for events on each HTTP handle */
         c = first_rtsp_ctx;
-        delay = 1000;
+        //delay = 1000;
+        delay = 10;
         while (c != NULL) {
             int fd;
             fd = c->fd;
@@ -663,6 +664,8 @@ static void close_connection(RTSPContext *c)
       close(c->fd);
     if (c->udp_fd >= 0)
       close(c->udp_fd);
+    if (c->ts > 0)
+      fclose(c->ts);
 
     av_freep(&c->pb_buffer);
     av_free(c->buffer);
@@ -1007,6 +1010,12 @@ static int rtp_new_stream(RTSPContext *c, struct sockaddr_in *dest_addr)
   // udp connect success!
   c->udp_fd = udp_fd;
   c->cur_offset = 0;
+  c->ts = fopen(c->stream->filename, "rb");
+  if (c->ts < 0) 
+  {
+      perror("fopen error!\n");
+      return -1;
+  }
   return 0;
 
   fail:
@@ -1282,7 +1291,8 @@ static int rtp_prepare_data(RTSPContext *c)
     memcpy(c->pb_buffer, rtp_hdr, RTP_HEADER_SIZE);
     free(rtp_hdr); // dealloc memory.
 
-    FILE *fr = fopen(stream->filename, "rb");
+    FILE *fr = c->ts;
+    //FILE *fr = fopen(stream->filename, "rb");
     if (fr < 0)
     {
       perror("fopen error!\n");
@@ -1317,7 +1327,7 @@ static int rtp_prepare_data(RTSPContext *c)
       memcpy(c->pb_buffer+RTP_HEADER_SIZE, buf, rest_bytes);
       c->buffer_end = c->pb_buffer + rest_bytes + 12;
     }
-    fclose(fr);
+    //fclose(fr);
   } else {
     perror("rtsp context doesn't have ts file!!! \n");
     return -1;
@@ -1348,7 +1358,7 @@ static int rtp_send_data(RTSPContext *c)
             return 0;
         }
 
-        cur_time = av_gettime() / 1000;
+        // cur_time = av_gettime() / 1000;
         // data rate 계산해서, 보낸 데이터 양이 byte stream보다 크면 보내지 않음
         int64_t offset_time = (cur_time - c->start_time); // ms 단위..
         unsigned int bit_rate = c->stream->idx_hdr->bit_rate; // kbps 임.. 

@@ -61,6 +61,7 @@ typedef struct RTSPContext {
   char method[16];
   char url[128];
   double ntp_start_time;
+  FILE *ts;
 } RTSPContext;
 
 typedef struct RTSPActionServerSetup {
