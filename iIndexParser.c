@@ -8,7 +8,12 @@ void dump_iIndexHeader(iIndexHeader *hdr)
   printf("------------ iIndexHeader dump----------\n");
   printf("------total_length = %u\n", hdr->total_length);
   printf("------bit_rate = %u kbps\n", hdr->bit_rate);
-  printf("------encoding_format = %d\n", hdr->encoding_format);
+  const char *encoding;
+  if (hdr->encoding_format == 0)
+    encoding = "H.264";
+  else
+    encoding = "H.265";
+  printf("------encoding_format = %s\n", encoding);
   printf("------duration = %u seconds\n", hdr->duration);
   return;
 }
@@ -61,7 +66,7 @@ int64_t get_closest_iframe_pos_by_time(iIndex *first_idx, double cur_time)
   for (i = first_idx; i != NULL; i = i->next)
   {
     // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
-    if (get_iIndex_PCR(i->next) >= cur_time)
+    if (i->next != NULL && get_iIndex_PCR(i->next) >= cur_time)
       return i->pos;
   }
   // can't find. 
@@ -76,7 +81,7 @@ iIndex* get_closest_iframe_by_pos(iIndex *first_idx, int64_t cur_pos)
   for (i = first_idx; i != NULL; i = i->next)
   {
     // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
-    if (i->next->pos >= cur_pos)
+    if (i->next != NULL &&i->next->pos >= cur_pos)
       return i;
   }
   // can't find. 
@@ -91,7 +96,7 @@ iIndex* get_closest_iframe_by_time(iIndex *first_idx, int64_t cur_time)
   for (i = first_idx; i != NULL; i = i->next)
   {
     // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
-    if (get_iIndex_PCR(i->next) >= cur_time)
+    if (i->next != NULL && get_iIndex_PCR(i->next) >= cur_time)
       return i;
   }
   // can't find. 
@@ -107,7 +112,7 @@ int64_t get_closest_iframe_pos(iIndex *first_idx, int64_t cur_pos)
   for (i = first_idx; i != NULL; i = i->next)
   {
     // next iframe pos가 cur pos보다 크면, cur iframe이 가장 가까운 iframe! 
-    if (i->next->pos >= cur_pos)
+    if (i->next != NULL && i->next->pos >= cur_pos)
       return i->pos;
   }
   // can't find. 

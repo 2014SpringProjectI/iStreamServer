@@ -949,7 +949,7 @@ static RTSPContext *rtp_new_connection(struct sockaddr_in *from_addr,
   c->last_packet_sent = false;
   c->ntp_start_time = 0.0;
   c->cur_idx = NULL;
-
+  c->print_time = 0.0;
   /* protocol is shown in statistics */
   av_strlcpy(c->protocol, "RTP/UDP", sizeof(c->protocol));
 
@@ -1379,8 +1379,10 @@ static int rtp_send_data(RTSPContext *c)
             free(c->pb_buffer);
             return -1;
           }
-          if (offset_time % 1000 == 0)
+          if (cur_time - c->print_time > 1000) {
             printf("served bytes report! cur_offset = %lld, served_bytes =  %lldkb, time_offset = %lldms, bit_rate = %ukpbs \n", c->cur_offset, c->served_bytes * 8 / 1000, offset_time, bit_rate);
+            c->print_time = cur_time;
+          }
           c->buffer_ptr += len;
           c->served_bytes += len; // pause 처리를 위해,  served_bytes를 가지고 있어야 함.
           c->cur_offset += len - 12; // rtp header size remove

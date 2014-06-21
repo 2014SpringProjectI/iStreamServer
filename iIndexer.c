@@ -253,6 +253,7 @@ int main(int argc, char const** argv)
               //printf("It's picture header! offset = %d \n", offset+i+5);
               PES_PICTURE_Found++;
               //unsigned char type = ((Buffer[offset+5+i] & 0x38) >> 3);
+              unsigned short pes_length = 0;
               if (V_TYPE == 264) 
               {
                 unsigned char type = Buffer[offset+i+2] == 1 ? (Buffer[offset+3+i] & 0x1f) : (Buffer[offset+4+i] & 0x1f);
@@ -265,6 +266,10 @@ int main(int argc, char const** argv)
                   State = 1; // write index 
                   NUM_OF_WRITE++;
                   write_index(sw, Last_PCR_BYTES, PCR_Found_Pos, iFrame_Found);
+                  int of = ts_packet_has_pes(Buffer, &pes_length);
+                  if (of != 0) {
+                    printf("ts pakcet has pes pes!! length = %d, payloadofs = %d\n", pes_length, of);
+                  }
                 }
               } else if (V_TYPE == 265) {
                 unsigned char type = Buffer[offset+i+2] == 1 ? (Buffer[offset+3+i] & 0x7e) >> 1 : (Buffer[offset+4+i] & 0x7e) >> 1;
@@ -277,6 +282,10 @@ int main(int argc, char const** argv)
                   State = 1; // write index 
                   NUM_OF_WRITE++;
                   write_index(sw, Last_PCR_BYTES, Packets, iFrame_Found);
+                  int of = ts_packet_has_pes(Buffer, &pes_length);
+                  if (of != 0) {
+                    printf("ts pakcet has pes pes!! length = %d, payloadofs = %d\n", pes_length, of);
+                  }
                 }
               } // end else if 
             } // end if 
@@ -315,12 +324,11 @@ int main(int argc, char const** argv)
 	// Closing files
 	fclose(sr);
 	fclose(sw);
-  
   // for test
   iIndexHeader *i_hdr = malloc(sizeof(*i_hdr));
 	iIndex *first_idx = start_parse_index_file(IndexName, i_hdr);
-	//dump_iIndexHeader(i_hdr);
-	//dump_through_iIndex(first_idx);
+	dump_through_iIndex(first_idx);
+	dump_iIndexHeader(i_hdr);
 	free(i_hdr);
 	// test end 
 	
@@ -340,7 +348,6 @@ int main(int argc, char const** argv)
 		printf(" * bit_rate is %.ukbps\n", bit_rate);
 	}
 	printf(" * Indexing running time was %.0fs\n",difftime(time(NULL),StartTime));
-
 	// End
 	printf("End of indexing.\n");
 	return(0);

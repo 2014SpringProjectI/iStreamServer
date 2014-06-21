@@ -62,6 +62,7 @@ typedef struct RTSPContext {
   char url[128];
   double ntp_start_time;
   FILE *ts;
+  int64_t print_time;            /* In milliseconds - for debugging */
 } RTSPContext;
 
 typedef struct RTSPActionServerSetup {
